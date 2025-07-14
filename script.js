@@ -1,4 +1,5 @@
 const mallaPorSemestre = [
+  // Primer Año - I Semestre
   {
     titulo: "Primer Año - I Semestre",
     ramos: [
@@ -10,6 +11,7 @@ const mallaPorSemestre = [
       { nombre: "Habilidades Comunicativas", id: "habilidades-comunicativas" }
     ]
   },
+  // Primer Año - II Semestre
   {
     titulo: "Primer Año - II Semestre",
     ramos: [
@@ -21,6 +23,7 @@ const mallaPorSemestre = [
       { nombre: "Cómo Elaborar una Investigación Científica", id: "como-investigar" }
     ]
   },
+  // Segundo Año - III Semestre
   {
     titulo: "Segundo Año - III Semestre",
     ramos: [
@@ -32,6 +35,7 @@ const mallaPorSemestre = [
       { nombre: "Antropología Filosófica", id: "antropologia" }
     ]
   },
+  // Segundo Año - IV Semestre
   {
     titulo: "Segundo Año - IV Semestre",
     ramos: [
@@ -45,6 +49,7 @@ const mallaPorSemestre = [
       { nombre: "Responsabilidad Social y Servicio Solidario", id: "rsss" }
     ]
   },
+  // Tercer Año - V Semestre
   {
     titulo: "Tercer Año - V Semestre",
     ramos: [
@@ -56,6 +61,7 @@ const mallaPorSemestre = [
       { nombre: "Ética Médica I", id: "etica-i", abre: ["etica-ii", "internado-interna", "internado-comunitaria", "internado-electivo"] }
     ]
   },
+  // Tercer Año - VI Semestre
   {
     titulo: "Tercer Año - VI Semestre",
     ramos: [
@@ -66,6 +72,7 @@ const mallaPorSemestre = [
       { nombre: "Ética Médica II", id: "etica-ii", abre: ["internado-interna", "internado-comunitaria", "internado-electivo"] }
     ]
   },
+  // Cuarto Año - VII Semestre
   {
     titulo: "Cuarto Año - VII Semestre",
     ramos: [
@@ -76,6 +83,7 @@ const mallaPorSemestre = [
       { nombre: "Patología I", id: "patologia-i", abre: ["patologia-ii", "internado-interna", "internado-comunitaria", "internado-electivo"] }
     ]
   },
+  // Cuarto Año - VIII Semestre
   {
     titulo: "Cuarto Año - VIII Semestre",
     ramos: [
@@ -86,6 +94,7 @@ const mallaPorSemestre = [
       { nombre: "Psiquiatría", id: "psiquiatria", abre: ["internado-interna", "internado-comunitaria", "internado-electivo"] }
     ]
   },
+  // Quinto Año
   {
     titulo: "Quinto Año",
     ramos: [
@@ -98,6 +107,7 @@ const mallaPorSemestre = [
       { nombre: "Obstetricia y Ginecología", id: "obstetricia", abre: ["internado-pediatria", "internado-cirugia", "internado-obstetricia"] }
     ]
   },
+  // Sexto Año
   {
     titulo: "Sexto Año",
     ramos: [
@@ -106,6 +116,7 @@ const mallaPorSemestre = [
       { nombre: "Internado de Obstetricia y Ginecología", id: "internado-obstetricia", abre: ["internado-integrado"] }
     ]
   },
+  // Séptimo Año
   {
     titulo: "Séptimo Año",
     ramos: [
@@ -117,36 +128,36 @@ const mallaPorSemestre = [
   }
 ];
 
-// Generar el mapa de id a ramo
+// Mapa id → ramo
 const idARamo = {};
-mallaPorSemestre.forEach(sem => {
-  sem.ramos.forEach(ramo => {
+mallaPorSemestre.forEach(semestre => {
+  semestre.ramos.forEach(ramo => {
     idARamo[ramo.id] = ramo;
   });
 });
 
-// Limpiar requisitos actuales
-Object.values(idARamo).forEach(ramo => {
-  delete ramo.requiere;
-});
+// Limpiar requisitos
+Object.values(idARamo).forEach(ramo => delete ramo.requiere);
 
-// Construir 'requiere' en base a 'abre'
+// Crear requisitos automáticos a partir de 'abre'
 Object.values(idARamo).forEach(ramo => {
   (ramo.abre || []).forEach(abreId => {
+    if (!idARamo[abreId]) return;
     if (!idARamo[abreId].requiere) idARamo[abreId].requiere = [];
-    idARamo[abreId].requiere.push(ramo.id);
+    if (!idARamo[abreId].requiere.includes(ramo.id)) {
+      idARamo[abreId].requiere.push(ramo.id);
+    }
   });
 });
 
-// Crear elementos DOM para la malla
 function crearMalla() {
   const contenedor = document.getElementById("malla");
   contenedor.innerHTML = "";
 
   mallaPorSemestre.forEach(semestre => {
-    const divSem = document.createElement("div");
-    divSem.className = "semestre";
-    divSem.innerHTML = `<h2>${semestre.titulo}</h2>`;
+    const divSemestre = document.createElement("div");
+    divSemestre.className = "semestre";
+    divSemestre.innerHTML = `<h2>${semestre.titulo}</h2>`;
 
     semestre.ramos.forEach(ramo => {
       const divRamo = document.createElement("div");
@@ -154,26 +165,23 @@ function crearMalla() {
       divRamo.id = ramo.id;
       divRamo.textContent = ramo.nombre;
 
-      // Si tiene requisitos, bloquearlo inicialmente
       if (ramo.requiere && ramo.requiere.length > 0) {
         divRamo.classList.add("bloqueado");
       }
 
       divRamo.addEventListener("click", () => {
         if (divRamo.classList.contains("bloqueado") || divRamo.classList.contains("aprobado")) return;
-
         divRamo.classList.add("aprobado");
-        actualizarDesbloqueos();
+        actualizarEstados();
       });
 
-      divSem.appendChild(divRamo);
+      divSemestre.appendChild(divRamo);
     });
 
-    contenedor.appendChild(divSem);
+    contenedor.appendChild(divSemestre);
   });
 }
 
-// Verifica si todos los requisitos de un ramo están aprobados
 function requisitosAprobados(ramo) {
   if (!ramo.requiere || ramo.requiere.length === 0) return true;
   return ramo.requiere.every(reqId => {
@@ -182,24 +190,20 @@ function requisitosAprobados(ramo) {
   });
 }
 
-// Actualiza la visibilidad (bloqueado/desbloqueado) de todos los ramos
-function actualizarDesbloqueos() {
+function actualizarEstados() {
   Object.values(idARamo).forEach(ramo => {
     const elem = document.getElementById(ramo.id);
     if (!elem) return;
 
     if (requisitosAprobados(ramo)) {
       elem.classList.remove("bloqueado");
-    } else {
-      // Solo bloquear si no está aprobado ya
-      if (!elem.classList.contains("aprobado")) {
-        elem.classList.add("bloqueado");
-      }
+    } else if (!elem.classList.contains("aprobado")) {
+      elem.classList.add("bloqueado");
     }
   });
 }
 
 window.onload = () => {
   crearMalla();
-  actualizarDesbloqueos();
+  actualizarEstados();
 };
