@@ -117,7 +117,7 @@ const mallaPorSemestre = [
   }
 ];
 
-// --- Generar automáticamente el campo 'requiere' basado en las relaciones 'abre' ---
+// Generar el mapa de id a ramo
 const idARamo = {};
 mallaPorSemestre.forEach(sem => {
   sem.ramos.forEach(ramo => {
@@ -125,66 +125,81 @@ mallaPorSemestre.forEach(sem => {
   });
 });
 
-// Limpiar requisitos actuales (por si acaso)
+// Limpiar requisitos actuales
 Object.values(idARamo).forEach(ramo => {
   delete ramo.requiere;
 });
 
-// Para cada ramo, buscar quiénes lo abren y asignarlo a sus requisitos
+// Construir 'requiere' en base a 'abre'
 Object.values(idARamo).forEach(ramo => {
-  // Si tiene el campo abre, entonces todos los ramos que aparecen allí dependen de este ramo
   (ramo.abre || []).forEach(abreId => {
-    const ramoDependiente = idARamo[abreId];
-    if (!ramoDependiente) return; // no existe
-    if (!ramoDependiente.requiere) ramoDependiente.requiere = [];
-    if (!ramoDependiente.requiere.includes(ramo.id)) {
-      ramoDependiente.requiere.push(ramo.id);
-    }
+    if (!idARamo[abreId].requiere) idARamo[abreId].requiere = [];
+    idARamo[abreId].requiere.push(ramo.id);
   });
 });
 
+// Crear elementos DOM para la malla
 function crearMalla() {
   const contenedor = document.getElementById("malla");
   contenedor.innerHTML = "";
-  mallaPorSemestre.forEach(bloque => {
-    const semestre = document.createElement("div");
-    semestre.className = "semestre";
-    semestre.innerHTML = `<h2>${bloque.titulo}</h2>`;
 
-    bloque.ramos.forEach(ramo => {
-      const div = document.createElement("div");
-      div.className = "ramo";
-      div.id = ramo.id;
-      div.textContent = ramo.nombre;
+  mallaPorSemestre.forEach(semestre => {
+    const divSem = document.createElement("div");
+    divSem.className = "semestre";
+    divSem.innerHTML = `<h2>${semestre.titulo}</h2>`;
+
+    semestre.ramos.forEach(ramo => {
+      const divRamo = document.createElement("div");
+      divRamo.className = "ramo";
+      divRamo.id = ramo.id;
+      divRamo.textContent = ramo.nombre;
+
+      // Si tiene requisitos, bloquearlo inicialmente
       if (ramo.requiere && ramo.requiere.length > 0) {
-        div.classList.add("bloqueado");
+        divRamo.classList.add("bloqueado");
       }
-      div.addEventListener("click", () => aprobarRamo(ramo.id));
-      semestre.appendChild(div);
+
+      divRamo.addEventListener("click", () => {
+        if (divRamo.classList.contains("bloqueado") || divRamo.classList.contains("aprobado")) return;
+
+        divRamo.classList.add("aprobado");
+        actualizarDesbloqueos();
+      });
+
+      divSem.appendChild(divRamo);
     });
 
-    contenedor.appendChild(semestre);
+    contenedor.appendChild(divSem);
   });
 }
 
-function aprobarRamo(id) {
-  const ramo = document.getElementById(id);
-  if (!ramo || ramo.classList.contains("aprobado") || ramo.classList.contains("bloqueado")) return;
-  ramo.classList.add("aprobado");
+// Verifica si todos los requisitos de un ramo están aprobados
+function requisitosAprobados(ramo) {
+  if (!ramo.requiere || ramo.requiere.length === 0) return true;
+  return ramo.requiere.every(reqId => {
+    const elem = document.getElementById(reqId);
+    return elem && elem.classList.contains("aprobado");
+  });
+}
 
-  // Desbloquear los ramos que dependen de este
-  const encontrado = mallaPorSemestre.flatMap(b => b.ramos).find(r => r.id === id);
-  const abre = encontrado?.abre || [];
-  abre.forEach(depId => {
-    const dep = document.getElementById(depId);
-    if (!dep) return;
+// Actualiza la visibilidad (bloqueado/desbloqueado) de todos los ramos
+function actualizarDesbloqueos() {
+  Object.values(idARamo).forEach(ramo => {
+    const elem = document.getElementById(ramo.id);
+    if (!elem) return;
 
-    const requisitos = mallaPorSemestre.flatMap(b => b.ramos).find(r => r.id === depId)?.requiere || [];
-    const aprobados = requisitos.every(req => document.getElementById(req)?.classList.contains("aprobado"));
-    if (aprobados) {
-      dep.classList.remove("bloqueado");
+    if (requisitosAprobados(ramo)) {
+      elem.classList.remove("bloqueado");
+    } else {
+      // Solo bloquear si no está aprobado ya
+      if (!elem.classList.contains("aprobado")) {
+        elem.classList.add("bloqueado");
+      }
     }
   });
 }
 
-window.onload = crearMalla();
+window.onload = () => {
+  crearMalla();
+  actualizarDesbloqueos();
+};
