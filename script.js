@@ -188,4 +188,3 @@ function aprobarRamo(id) {
 }
 
 window.onload = crearMalla();
-
